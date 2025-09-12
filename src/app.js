@@ -9,6 +9,8 @@ app.use(express.urlencoded({extended:true , limit: "16kb"})) // parse the url an
 app.use(express.static("public"))
 
 //cors conf.
+
+
 app.use(cors(
   {
     origin: process.env.CORS_ORIGIN?.split(",") || "http://localhost:5173",
@@ -22,7 +24,8 @@ app.use(cors(
 
 // healthCheck route setup
 import healthCheckRoute from "./routes/healthCheck.route.js";
+import { authRouter } from "./routes/auth.route.js";
 
 app.use("/api/v1/healthcheck" , healthCheckRoute); // whenever someone hits /api/v1/healthcheck route , authority is handled to healthCheckRoute by app.use()
-
+app.use("/api/v1/auth" , authRouter);
 export default app;
