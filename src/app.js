@@ -1,7 +1,9 @@
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 
 const app = express();
+
 
 app.use(express.json({limit: "16kb"})) // use is a middleware that stands between the request and the main controller function . All this does is pre-process the incoming data and some conditionals . Here by using express.json() we are able to access json request bodies from the request object
 
@@ -20,7 +22,7 @@ app.use(cors(
   }
 ));
 
-// routing
+app.use(cookieParser());
 
 // healthCheck route setup
 import healthCheckRoute from "./routes/healthCheck.route.js";

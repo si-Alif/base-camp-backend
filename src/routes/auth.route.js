@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { registerUser} from "../controller/auth.controller.js";
-import {user_register_validator} from "../validator/index.js"
+import { login_user, registerUser} from "../controller/auth.controller.js";
+import {user_login_validator, user_register_validator} from "../validator/index.js"
 import { validate } from "../middleware/validator.middleware.js";
 
 
@@ -15,6 +15,7 @@ const router = Router();
 // According to the logic on validate() , if the validation passed then the request flow reaches the controller via next()
 // else in this case the middleware catches all the errors in an array and then throws an error to the user . So the flow stops and it never reaches to the controller
 router.route("/register").post(user_register_validator() , validate , registerUser);
+router.route("/login").post(user_login_validator() , validate ,login_user); // TODO : add validator
 
 
 export {router as authRouter};

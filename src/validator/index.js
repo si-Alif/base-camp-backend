@@ -2,6 +2,7 @@ import { body } from "express-validator";
 
 
 const user_register_validator = () => {
+  console.log("hello")
   return [
     body("email")
         .trim()
@@ -35,8 +36,24 @@ const user_register_validator = () => {
         .trim()
         .isEmpty()
         .withMessage("Can't instantiate with an empty full name field")
-    
+
   ]
 };
 
-export {user_register_validator};
+const user_login_validator = () =>{
+  return [
+    body("email")
+        .optional()
+        .trim()
+        .isEmail()
+        .withMessage("Please enter a valid email"),
+    body("password")
+        .trim()
+        .notEmpty()
+        .withMessage("Password is required")
+        .isLength({min: 4 , max : 20})
+        .withMessage("Password must be between 4 and 20 characters long")
+  ]
+}
+
+export {user_register_validator , user_login_validator};

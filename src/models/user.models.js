@@ -102,9 +102,9 @@ user_schema.methods.generate_access_token = function (){
       email : this.email,
       username : this.username,
     },
-    process.env.ACCESS_tOKEN_SECRET,
+    process.env.ACCESS_TOKEN_SECRET,
     {
-      expiresIn: process.env.ACCESS_tOKEN_EXPIRY,
+      expiresIn: process.env.ACCESS_TOKEN_EXPIRY,
     },
   )
 }
