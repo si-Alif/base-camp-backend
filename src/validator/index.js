@@ -2,7 +2,6 @@ import { body } from "express-validator";
 
 
 const user_register_validator = () => {
-  console.log("hello")
   return [
     body("email")
         .trim()
@@ -18,7 +17,8 @@ const user_register_validator = () => {
     // another validation check
     body("username")
         .trim()
-        .isEmpty()
+      // .isEmpty() --> ❌checks if the value IS empty and returns error if it's NOT empty
+        .notEmpty()
         .withMessage("Username is required")
         .isLowercase()
         .withMessage("Username must be lowercase")
@@ -27,16 +27,15 @@ const user_register_validator = () => {
 
     body("password")
         .trim()
-        .isEmpty()
+        .notEmpty()
         .withMessage("Password is required")
         .isLength({min : 6})
         .withMessage("Password must be at least 6 characters long"),
     body("full_name")
         .optional() // saying , "Hey there acn be a field called full_name . If it's there go ahead and validate it . If not terminate this checkpoint"
         .trim()
-        .isEmpty()
+        .notEmpty()
         .withMessage("Can't instantiate with an empty full name field")
-
   ]
 };
 

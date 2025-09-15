@@ -9,7 +9,6 @@ const generate_ST_RT = async (user_id) =>{
     const user = await User.findById(user_id);
     const AT = user.generate_access_token();
     const RT = user.generate_refresh_token();
-    console.log(RT);
     user.refresh_token = RT;
     await user.save({validateBeforeSave : false});
     return {AT , RT};
