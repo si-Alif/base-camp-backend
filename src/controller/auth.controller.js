@@ -98,7 +98,7 @@ const login_user = asyncHandler(async (req , res)=>{
     "-password -email_verification_token -email_verification_token_expiry"
   );
 
-  if(!logged_in_user) throw new API_error(500 , "Internal Server Error while searching for the created user");
+  if(!logged_in_user) throw new API_error(500 , "Internal Server Error while searching for the logged in user");
 
   const options = {
     httpOnly :true ,
@@ -115,5 +115,33 @@ const login_user = asyncHandler(async (req , res)=>{
   }
 )
 
+// we've an identifier for each authorized time period of a certain user stored in database which is the refresh token .
+const logout_user = asyncHandler(async (req , res)=>{
+  await User.findByIdAndUpdate(
+    req.user?._id ,
+    {
+      $set :{
+        refresh_token : ""
+      }
+    },
+    // this `new:true` will return the updated document
+    {
+      new :true
+    }
+  )
 
-export {registerUser , generate_ST_RT , login_user}
+  const options = {
+    httpOnly :true ,
+    secure : true
+  }
+
+  return res
+      .status(200)
+      .clearCookie("access_token" , options)
+      .clearCookie("refresh_token" , options)
+      .json(new API_response(200 , {} , "User logged out successfully"));
+
+})
+
+
+export {registerUser , generate_ST_RT , login_user , logout_user}
