@@ -1,3 +1,6 @@
+import crypto from "crypto";
+import jwt from "jsonwebtoken";
+
 import { User } from "../models/user.models.js";
 import { API_response } from "../utils/API_response.js";
 import { API_error } from "../utils/API_error.js";
@@ -144,4 +147,108 @@ const logout_user = asyncHandler(async (req , res)=>{
 })
 
 
-export {registerUser , generate_ST_RT , login_user , logout_user}
+const get_current_user = asyncHandler(async(req , res)=>{
+  // as this is a protected route , we would have the user info access in req.user
+
+  return res.status(200).json(
+    new API_response(200 , {user : req.user} , "User info fetched successfully")
+  )
+
+})
+
+
+const verify_email  = asyncHandler(async (req , res)=>{
+  const {email_verification_token} = req.params;
+
+  if(!email_verification_token) throw new API_error(400 , "Email verification token is required");
+
+  const hashed_token = crypto.createHash("sha256").update(email_verification_token).digest("hex");
+
+  const user = await User.findOne({
+    email_verification_token : hashed_token,
+    // check for the user who's email verification token is still valid
+    email_verification_token_expiry : {
+      $gt : Date.now()
+    }
+  })
+
+  if(!user) throw new API_error(400 , "Invalid or expired email verification token");
+
+  user.email_verification_token = null;
+  user.email_verification_token_expiry = null;
+  user.is_email_verified = true;
+  await user.save({validateBeforeSave : false});
+
+  return res.status(200).json(
+    new API_response(200 , {is_email_verified : true} , "Email verified successfully")
+  )
+
+})
+
+
+const resend_email_verification = asyncHandler(async (req , res)=>{
+  const user  = await User.findById(req.user?._id);
+  if(!user) throw new API_error(404 , "User not found");
+  if(user.is_email_verified) throw new API_error(409 , "Email already verified");
+
+  const {unhashed_token , hashed_token , expiry} = user.generate_email_verification_token();
+
+  user.email_verification_token = hashed_token;
+  user.email_verification_token_expiry = expiry;
+  await user.save({validateBeforeSave : false});
+
+
+  await sendmail({
+    email: user?.email,
+    subject: "Email Verification",
+    mailgen_content: email_verification_template(user.username, `${req.protocol}://${req.get("host")}/api/v1/users/auth/verify-email/${unhashed_token}`)
+  })
+
+  return res.status(200).json(
+    new API_response(200 , {} , "Verification email sent successfully")
+  )
+
+})
+
+
+const refresh_access_token = asyncHandler(async ()=>{
+  const incoming_RT = req.cookies?.refresh_token || req?.header("Authorization")?.replace("Bearer " , "");
+
+  if(!incoming_RT) throw new API_error(401 , "Unauthorized request");
+
+  try{
+    const decoded_token = jwt.verify(incoming_RT , process.env.REFRESH_TOKEN_SECRET);
+    if(!decoded_token) throw new API_error(401 , "Invalid refresh token received");
+
+    const user = await User.findById(decoded_token?._id);
+
+    if(!user) throw new API_error(401 , "User not found");
+
+    if(incoming_RT !== user.refresh_token) throw new API_error(401 , "Invalid refresh token received");
+
+    const options = {
+      httpOnly :true ,
+      secure : true
+    }
+
+    const {AT , RT} = await generate_ST_RT(user._id);
+
+    user.refresh_token = RT;
+
+    await user.save({validateBeforeSave : false});
+
+    return res.status(200)
+                        .cookie("access_token" , AT , options)
+                        .cookie("refresh_token" , RT , options)
+                        .json(
+                                new API_response(200 , {access_token : AT} , "Access token refreshed successfully")
+                              )
+
+  }
+  catch(err){
+    throw new API_response(401 , "Invalid refresh token received");
+  }
+
+})
+
+export {registerUser , generate_ST_RT , login_user , logout_user , get_current_user , verify_email , resend_email_verification};
