@@ -119,7 +119,7 @@ const login_user = asyncHandler(async (req , res)=>{
   }
 )
 
-const forgot_password_request = asyncHandler(async () => {
+const forgot_password_request = asyncHandler(async (req , res) => {
   const { email } = req.body
 
   const user = await User.findOne({ email })
@@ -251,7 +251,7 @@ const resend_email_verification = asyncHandler(async (req , res)=>{
   if(!user) throw new API_error(404 , "User not found");
   if(user.is_email_verified) throw new API_error(409 , "Email already verified");
 
-  const {unhashed_token , hashed_token , expiry} = user.generate_email_verification_token();
+  const { unhashed_token, hashed_token, expiry } = user.generate_temporary_token();
 
   user.email_verification_token = hashed_token;
   user.email_verification_token_expiry = expiry;

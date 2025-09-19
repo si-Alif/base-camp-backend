@@ -6,7 +6,7 @@ const user_register_validator = () => {
     body("email")
         .trim()
         //part 1
-        .notEmpty()
+        .notEmpty() // not empty then proceed otherwise terminate along with "withMessage()"
         .withMessage("Email is required")
         // this works as : "Hey execute .notEmpty() , if somehow it fails then execute .withMessage() and terminate the flow right there"
         //part : 2
@@ -50,9 +50,57 @@ const user_login_validator = () =>{
         .trim()
         .notEmpty()
         .withMessage("Password is required")
-        .isLength({min: 4 , max : 20})
+        .isLength({min: 6 })
         .withMessage("Password must be between 4 and 20 characters long")
   ]
 }
 
-export {user_register_validator , user_login_validator};
+const user_change_current_password_validator = () =>{
+  return [
+    body("old_pass")
+        .trim()
+        .notEmpty()
+        .withMessage("Old Password is required")
+        .isLength({min: 6 })
+        .withMessage("Password must be between 4 and 20 characters long"),
+
+    body("new_pass")
+        .trim()
+        .notEmpty()
+        .withMessage("New Password is required")
+        .isLength({min: 6 })
+        .withMessage("Password must be between 4 and 20 characters long"),
+  ]
+}
+
+const forgot_password_request_validator = () =>{
+  return [
+    body("email")
+        .trim()
+        .notEmpty()
+        .withMessage("Email is required")
+        .isEmail()
+        .withMessage("Please enter a valid email address"),
+  ]
+}
+
+const forgot_password_reset_validator = () =>{
+  return [
+    body("password")
+        .trim()
+        .notEmpty()
+        .withMessage("Password is required")
+        .isLength({min: 6 })
+        .withMessage("Password must be between 6 and 20 characters long"),
+  ]
+}
+
+
+export {
+  user_register_validator ,
+  user_login_validator ,
+  user_change_current_password_validator ,
+  forgot_password_request_validator ,
+  forgot_password_reset_validator
+
+};
