@@ -5,7 +5,7 @@ import { User } from "../models/user.models.js";
 import { API_response } from "../utils/API_response.js";
 import { API_error } from "../utils/API_error.js";
 import { asyncHandler } from "../utils/async_handlers.js";
-import { sendmail , email_verification_template } from "../utils/mail.js";
+import { sendmail , email_verification_template, email_reset_password_template } from "../utils/mail.js";
 
 const generate_ST_RT = async (user_id) =>{
   try {
@@ -19,6 +19,7 @@ const generate_ST_RT = async (user_id) =>{
     throw new API_error(500 , "Internal Server Error while generating ST and RT" );
   }
 }
+
 
 const registerUser = asyncHandler(async (req , res)=>{
   // destructure the req.body json
@@ -117,6 +118,65 @@ const login_user = asyncHandler(async (req , res)=>{
             )
   }
 )
+
+const forgot_password_request = asyncHandler(async () => {
+  const { email } = req.body
+
+  const user = await User.findOne({ email })
+
+  if (!user) throw new API_error(404, "User not found");
+
+  const {
+    unhashed_token,
+    hashed_token,
+    token_expiry
+  } = user.generate_temporary_token()
+
+  user.forgot_password = hashed_token;
+  user.forgot_password_expiry = token_expiry;
+  await user.save({ validateBeforeSave: false })
+
+  await sendmail({
+    email: email,
+    subject: "Forgot Password",
+    mailgen_content: email_reset_password_template(
+      user.username, `${process.env.FORGOT_PASSWORD_REDIRECT_URL}/${unhashed_token}`)
+  })
+
+  return res.status(200).json(
+    new API_response(200, {}, "Password reset link sent successfully")
+  )
+
+})
+
+
+const forgot_password_reset_handler = asyncHandler(async (req, res) => {
+  const { token } = req.params;
+  const { password } = req.body;
+
+  const hashed_token = crypto.createHash("sha256").update(token).digest("hex");
+
+  const user = await User.findOne({
+    forgot_password: hashed_token,
+    forgot_password_expiry: {
+      $gt: Date.now()
+    }
+  })
+
+  if (!user) throw new API_error(489, "Invalid or expired password reset token");
+
+  user.password = password; // as password field was changed , based on db connections pools functionality it'll be hashed automatically
+  user.forgot_password = null;
+  user.forgot_password_expiry = null;
+
+  await user.save({ validateBeforeSave: false });
+
+  return res.status(200).json(
+    new API_response(200, {}, "Password reset successfully")
+  )
+
+})
+
 
 // we've an identifier for each authorized time period of a certain user stored in database which is the refresh token .
 const logout_user = asyncHandler(async (req , res)=>{
@@ -251,4 +311,37 @@ const refresh_access_token = asyncHandler(async ()=>{
 
 })
 
-export {registerUser , generate_ST_RT , login_user , logout_user , get_current_user , verify_email , resend_email_verification};
+const reset_password = asyncHandler(async (req , res)=>{
+
+  const {new_pass , old_pass} = req.body;
+  const user = await User.findById(req.user?._id);
+
+  if(!user) throw new API_error(404 , "User not found");
+
+  const is_password_correct = await user.is_password_correct(old_pass);
+
+  if(!is_password_correct) throw new API_error(401 , "Invalid old password . Please check your old password and try again or go for forgot password option if you have forgotten your password");
+
+  user.password = new_pass;
+  await user.save({validateBeforeSave : false});
+
+  return res.status(200).json(
+    new API_response(200 , {} , "Password changed successfully")
+  )
+
+})
+
+
+export {
+  registerUser ,
+  generate_ST_RT ,
+  login_user ,
+  logout_user ,
+  get_current_user ,
+  verify_email ,
+  resend_email_verification ,
+  refresh_access_token,
+  forgot_password_request,
+  forgot_password_reset_handler,
+  reset_password,
+};
